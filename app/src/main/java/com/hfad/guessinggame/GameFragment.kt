@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import com.hfad.guessinggame.databinding.FragmentGameBinding
 
@@ -12,13 +13,9 @@ class GameFragment : Fragment() {
 
     private var _binding: FragmentGameBinding? = null
     private val binding get() = _binding!!
+    lateinit var viewModel:GameViewModel
 
-    private val words = listOf("Android", "Activity", "Fragment")
-    private val secretWord = words.random().uppercase()
-    private var secretWordDisplay = ""
-    var correctGuesses = ""
-    var incorrectGuesses = ""
-    var livesLeft = 8
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,16 +24,17 @@ class GameFragment : Fragment() {
     ): View? {
         _binding = FragmentGameBinding.inflate(inflater, container, false)
         val view = binding.root
-        secretWordDisplay = deriveSecretWordDisplay()
+        viewModel = ViewModelProvider(this).get(GameViewModel::class.java)
         updateScreen()
+
         binding.guessButton.setOnClickListener() {
-            makeGuess(binding.guess.text.toString().uppercase())
+            viewModel.makeGuess(binding.guess.text.toString().uppercase())
             binding.guess.text = null
             updateScreen()
 
-            if (isWon() || isLost()) {
+            if (viewModel.isWon() || viewModel.isLost()) {
                 val action = GameFragmentDirections
-                    .actionGameFragmentToResultFragment(wonLostMessage())
+                    .actionGameFragmentToResultFragment(viewModel.wonLostMessage())
                 view.findNavController().navigate(action)
             }
         }
@@ -49,46 +47,9 @@ class GameFragment : Fragment() {
     }
 
     private fun updateScreen() {
-        binding.word.text = secretWordDisplay
-        binding.lives.text = "You have $livesLeft lives left."
-        binding.incorrectGuesses.text = "Incorrect guesses: $incorrectGuesses"
-    }
-
-    private fun deriveSecretWordDisplay(): String {
-        var display = ""
-        secretWord.forEach {
-            display += checkLetter(it.toString())
-        }
-        return display
-    }
-
-    private fun checkLetter(str: String) = when (correctGuesses.contains(str)) {
-        true -> str
-        false -> "_"
-    }
-
-    private fun makeGuess(guess: String) {
-        if (guess.length == 1) {
-            if (secretWord.contains(guess)) {
-                correctGuesses += guess
-                secretWordDisplay = deriveSecretWordDisplay()
-            } else {
-                incorrectGuesses += "$guess"
-                livesLeft--
-            }
-        }
-    }
-
-    private fun isWon() = secretWord.equals(secretWordDisplay, true)
-
-    private fun isLost() = livesLeft <= 0
-
-    private fun wonLostMessage():String{
-        var message = ""
-        if(isWon()) message = "You won!"
-        else if(isLost()) message = "You Lost!"
-        message+="The word was $secretWord ."
-        return message
+        binding.word.text = viewModel.secretWordDisplay
+        binding.lives.text = "You have ${viewModel.livesLeft} lives left."
+        binding.incorrectGuesses.text = "Incorrect guesses: ${viewModel.incorrectGuesses}"
     }
 
 }
